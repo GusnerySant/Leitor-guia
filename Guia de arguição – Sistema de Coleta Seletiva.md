@@ -282,27 +282,17 @@ O professor pode ir direto nestes pontos. Vale preparar a resposta, porque são 
 - No código: `agendar`, `recusar`, `iniciarRecolhimento` e `concluirRecolhimento` **não recebem nem comparam ponto**. `cancelar` e `reagendar` comparam `pontoId` (e `moradorId` no cancelar) **apenas se o cliente enviar**, pois são opcionais nos DTOs. Em `cancelar`, o critério "morador só cancela as próprias" só vale se `moradorId` vier.
 - Resposta sugerida: é uma simulação de papel por filtro de contexto; num sistema real essa checagem sairia do usuário autenticado, no backend (RNF06).
 
-**`OperadorService` (RF07 e RNF03).**
-
-- `buscarPorId` e `atualizar` lançam `RuntimeException` genérica quando o operador ou o ponto não existe. O tratador global transforma isso em **500**, não em 404. Os outros services usam `RecursoNaoEncontradoException`.
-- Não há checagem de e-mail duplicado no service (o método `existsByEmailIgnoreCase` existe no repositório, mas não é chamado). A duplicidade é barrada pelo `UNIQUE` do banco e chega como 409 genérico ("viola uma regra de integridade"), sem normalizar caixa e espaços como no morador.
-- Corrigir é simples: trocar para `RecursoNaoEncontradoException` e chamar `existsByEmailIgnoreCase` (normalizado) em `criar` e `atualizar`.
 
 **Índices e RNF04 (critérios ainda desmarcados).** Nas migrações há apenas `idx_ope_operador_pdc_nr_id` e `uk_material_nome`, além dos índices das restrições `UNIQUE` e das chaves primárias. Não há índices específicos para os filtros de `pesquisar` (situação, `dataCriacao`, `pdc_nr_id`, `mor_nr_id`). A medição de desempenho está explicitamente fora da Unidade 1 (Guia §1), mas o Guia inclui "índices" no escopo. Se perguntarem, diga que a paginação e o teto de 100 estão feitos e que índices sob medida (`EXPLAIN`) são o próximo passo.
 
 **RF15, critério "o período pode ser escolhido".** O período vale só para as **quantidades recolhidas**. A contagem por situação é intencionalmente da situação atual de todas as solicitações (comentário em `contarPorSituacao`).
 
-**RF02 e RN03 (endereços).** `EnderecoService.deletar(id)` apaga fisicamente e **não usa** o `moradorId` da URL para conferir o dono do endereço. Como a solicitação guarda uma **cópia** (RN04), apagar endereço não quebra solicitações antigas, mas a falta da conferência de dono é uma brecha. A RN03 cita apenas materiais, pontos e moradores como "não excluíveis" (Relatório "Inativação de moradores").
-
-**Pendência já registrada pela equipe (Guia §6, "em aberto").** Ponto inativo ainda pode receber novos vínculos de material: `MaterialAceitoService.vincular` não confere a situação do ponto.
 
 **RF01 e telefone.** O dicionário do relatório marca `mor_tx_fone` como não nulo, mas o DTO não exige telefone (só nome e e-mail, como diz o RF01). Um cadastro sem telefone pode falhar no banco e sair como 409 genérico. Vale testar no Swagger antes da apresentação e decidir se o telefone vira obrigatório ou se a coluna passa a aceitar nulo (V6).
 
 **RN04, correção antes do agendamento.** A RN04 fala em corrigir itens e endereço antes de agendar, mas não há endpoint para isso; hoje eles já nascem imutáveis. O comentário em `agendar` já registra isso.
 
 **Testes.** Só existe o `MigracoesFlywayTest` (convenções das migrações). Testes de integração e do rollback são da Unidade 2 (Guia §1; Relatório "Testes automatizados").
-
-**Pequenas inconsistências de texto.** Um comentário em `PontoDeColetaRepository` cita o atributo `pontoColeta`, mas a entidade usa `pontoDeColeta`; o Guia cita `existsByPontoDeColetaIdAndMaterialId` para o RF08, mas `criar` usa `findByPontoDeColetaIdAndMaterialId` (para pegar o limite). Não afetam o comportamento.
 
 ---
 
